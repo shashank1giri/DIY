@@ -1,0 +1,32 @@
+version: '3.6'
+services:
+  db:
+    image: postgres
+    ports:
+    - "5433:5432"
+    env_file:
+      - environment.env
+
+
+  p2pchat:
+    build: .
+    image: diy:p2pchat
+    ports:
+      - "8020:8020"
+    depends_on:
+      - db
+    env_file:
+      - environment.env
+
+  web:
+    build:
+      context: $HOME/Documents/Auth_service_diy
+    image: diy:login
+    ports:
+    - "8000:8020"
+    depends_on:
+      - p2pchat
+    env_file:
+      - environment.env
+
+
