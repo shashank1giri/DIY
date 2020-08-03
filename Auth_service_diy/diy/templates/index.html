@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Simple Chat</title>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.97.8/css/materialize.min.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/emojione/2.2.6/assets/css/emojione.min.css"/>
+    <link rel="stylesheet" href="{% static 'style.css' %}">
+
+</head>
+<body>
+<header>
+    <nav>
+        <div class="nav-wrapper">
+            <a href="/" class="brand-logo left">Welcome {{user.name}}</a>
+            <a href="{% url 'user:logout' %}" class="brand-logo right">Logout </a>
+        </div>
+        <div class="nav-wrapper">
+
+        </div>
+    </nav>
+</header>
+<main id="app">
+    <div class="row">
+        <div class="col s12">
+            <div class="card horizontal">
+                <div id="chat-messages" class="card-content" v-html="chatContent">
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row" v-if="!joined">
+        <div class="input-field col s6">
+            <input type="text" v-model="newMsg" @keyup.enter="send()" placeholder="Message">
+        </div>
+        <div class="input-field col s3">
+            <input type="text" v-model="group" @keyip.enter="send()" placeholder="Group No.">
+        </div>
+        <div class="input-field col s3">
+            <button class="waves-effect waves-light btn" @click="send()">
+                <i class="material-icons right">chat</i>
+                Send
+            </button>
+        </div>
+    </div>
+    <div class="row">
+         <div class="input-field col s4">
+            <input type="text" v-model="grpId" placeholder="Group Number to Join or leave.">
+        </div>
+        <div class="input-field col s2">
+            <button class="waves-effect waves-light btn" @click="join_group()">
+                <i class="material-icons right"> done </i>Join </button>
+        </div>
+        <div class="input-field col s2">
+            <button class="waves-effect waves-light btn" @click="leave_group()">
+                <i class="material-icons right"> undone </i>Leave </button>
+        </div>
+
+    </div>
+<!--    <div class="row" v-else>-->
+<!--        <div class="input-field col s8">-->
+<!--            <input type="email" v-model.trim="email" placeholder="Email">-->
+<!--        </div>-->
+<!--        <div class="input-field col s8">-->
+<!--            <input type="text" v-model.trim="username" placeholder="Username">-->
+<!--        </div>-->
+<!--        <div class="input-field col s4">-->
+<!--            <button class="waves-effect waves-light btn" @click="join()">-->
+<!--                <i class="material-icons right">done</i>-->
+<!--                Join-->
+<!--            </button>-->
+<!--        </div>-->
+<!--    </div>-->
+
+</main>
+<footer class="page-footer">
+</footer>
+<script src="https://unpkg.com/vue@2.1.3/dist/vue.min.js"></script>
+<script src="https://cdn.jsdelivr.net/emojione/2.2.6/lib/js/emojione.min.js"></script>
+<script src="https://code.jquery.com/jquery-2.1.1.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/3.1.2/rollups/md5.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.97.8/js/materialize.min.js"></script>
+<script>
+    new Vue({
+    el: '#app',
+
+    data: {
+        ws: null, // Our websocket
+        newMsg: '', // Holds new messages to be sent to the server
+        chatContent: '', // A running list of chat messages displayed on the screen
+        email: null, // Email address used for grabbing an avatar
+        username: null, // Our username
+        joined: false, // True if email and username have been filled in
+        token: '{{token}}',
+        group: '',
+        grpId: '',
+    },
+
+    created: function() {
+        var self = this;
+        this.ws = new WebSocket('ws://localhost:8020/ws'+'/{{token}}');
+        this.ws.addEventListener('message', function(e) {
+            var msg = JSON.parse(e.data);
+            console.log(msg)
+            var alignment = '<div align="left">'
+            if(msg.sender.id == {{user.id}})
+                alignment = '<div align="right">'
+            self.chatContent += alignment+
+            '<div class="chip">'
+                    + '<img src="' + self.gravatarURL(msg.sender.name) + '">' // Avatar
+                    + msg.sender.name
+                + '</div>'
+                + emojione.toImage(msg.text) + '<br/> </div>'; // Parse emojis
+
+            var element = document.getElementById('chat-messages');
+            element.scrollTop = element.scrollHeight; // Auto scroll to the bottom
+        });
+    },
+
+    methods: {
+        send: function () {
+            this.group  =  $('<p>').html(this.group).text();
+            console.log(this.group)
+            if (this.newMsg != '' && !isNaN(this.group)) {
+                this.ws.send(
+                    JSON.stringify({
+                        type: 0,
+                        group : this.group|0,
+                        text: $('<p>').html(this.newMsg).text(), // Strip out html
+                        sender :{
+                            name: '{{user.name}}'
+                        }
+                    }
+                ));
+                this.newMsg = ''; // Reset newMsg
+            }
+            else if(isNaN(this.group)){
+                Materialize.toast("Group No. should be a valid integer",2000)
+            }
+
+        },
+
+        join: function () {
+            if (!this.email) {
+                Materialize.toast('You must enter an email', 2000);
+                return
+            }
+            if (!this.username) {
+                Materialize.toast('You must choose a username', 2000);
+                return
+            }
+            this.email = $('<p>').html(this.email).text();
+            this.username = $('<p>').html(this.username).text();
+            this.joined = true;
+        },
+        join_group: function(){
+            this.grpId  =  $('<p>').html(this.grpId).text();
+            var grpId = parseInt(this.grpId,10)
+            console.log(grpId, isNaN(this.grpId))
+            if(grpId == this.grpId){
+                alert("Group Joined");
+                this.ws.send(
+                    JSON.stringify({
+                        type: 1,
+                        group: grpId
+                    })
+                );
+            }
+            else{
+                Materialize.toast("Group No. should be a valid integer number",2000);
+                return;
+            }
+        },
+        leave_group: function(){
+            this.grpId  =  $('<p>').html(this.grpId).text();
+            var grpId = parseInt(this.grpId,10);
+            console.log(grpId, isNaN(this.grpId));
+            if(grpId == this.grpId){
+                alert("Group Left")
+                this.ws.send(
+                    JSON.stringify({
+                        type: 2,
+                        group: grpId
+                    })
+                );
+            }
+            else{
+                Materialize.toast("Group No. should be a valid integer number",2000)
+                return;
+            }
+        },
+        gravatarURL: function(email) {
+            return 'http://www.gravatar.com/avatar/' + CryptoJS.MD5(email);
+        }
+    }
+});
+
+</script>
+</body>
+</html>

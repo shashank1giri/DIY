@@ -1,0 +1,15 @@
+
+{% if users %}
+<ul>
+    {% for user in users %}
+    <li>
+        <a href = "{% url 'user:show' user.id %}">{{user.phone_number}}</a>
+        <p><strong>Phone No.:</strong>{{user.phone_number}}</p>
+        <p><strong>Username:</strong>{{user.name}}</p>
+        <p><strong>Email:</strong>{{user.email}}</p>
+    </li>
+    {% endfor %}
+
+</ul>
+
+{% endif %}

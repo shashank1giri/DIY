@@ -1,0 +1,4 @@
+diy/venv/
+diy/diy/__pycache__
+diy/user/__pycache__
+diy/user/migrations
